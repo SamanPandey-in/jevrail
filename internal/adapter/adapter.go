@@ -23,13 +23,15 @@ type Adapter interface {
 	Encode(verdict, reason string) (stdout []byte, exitCode int)
 }
 
-// ByName returns the adapter for a given agent name ("claude", "codex").
+// ByName returns the adapter for a given agent name ("claude", "codex", "opencode").
 func ByName(name string) (Adapter, bool) {
 	switch name {
 	case "claude":
 		return ClaudeAdapter{}, true
 	case "codex":
 		return CodexAdapter{}, true
+	case "opencode":
+		return OpenCodeAdapter{}, true
 	default:
 		return nil, false
 	}

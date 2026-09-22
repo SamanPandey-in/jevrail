@@ -7,10 +7,14 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/SamanPandey-in/jevrail/internal/config"
+	opencodeplugin "github.com/SamanPandey-in/jevrail/plugin/opencode"
 )
+
+var opencodePluginSource = opencodeplugin.Source
 
 // --- install / uninstall -------------------------------------------------
 //
@@ -30,8 +34,10 @@ func cmdInstall(args []string) error {
 	case "codex":
 		return fmt.Errorf("codex install is not implemented yet — the hook schema is unverified " +
 			"(see internal/adapter/codex.go). Register `jevrail hook codex` manually once confirmed")
+	case "opencode":
+		return installOpencode(args)
 	default:
-		return fmt.Errorf("unknown agent %q (want claude or codex)", agentName)
+		return fmt.Errorf("unknown agent %q (want claude, codex, or opencode)", agentName)
 	}
 }
 
@@ -40,8 +46,10 @@ func cmdUninstall(args []string) error {
 	switch agentName {
 	case "claude":
 		return uninstallClaude()
+	case "opencode":
+		return uninstallOpencode(args)
 	default:
-		return fmt.Errorf("unknown agent %q (want claude)", agentName)
+		return fmt.Errorf("unknown agent %q (want claude or opencode)", agentName)
 	}
 }
 
@@ -52,6 +60,15 @@ func flagValue(args []string, name, def string) string {
 		}
 	}
 	return def
+}
+
+func hasFlag(args []string, name string) bool {
+	for _, a := range args {
+		if a == name {
+			return true
+		}
+	}
+	return false
 }
 
 func claudeSettingsPath() (string, error) {
@@ -204,6 +221,310 @@ func backupFile(path string) error {
 	return os.WriteFile(backupPath, data, 0o644)
 }
 
+// --- opencode -----------------------------------------------------------
+
+func opencodeGlobalConfigPath() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, ".config", "opencode", "opencode.json"), nil
+}
+
+func opencodeGlobalPluginPath() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, ".config", "opencode", "plugin", "jevrail.ts"), nil
+}
+
+func opencodeProjectPluginPath() (string, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(cwd, ".opencode", "plugin", "jevrail.ts"), nil
+}
+
+func installOpencode(args []string) error {
+	if hasFlag(args, "--project") {
+		return installOpencodeProject()
+	}
+	return installOpencodeGlobal()
+}
+
+func installOpencodeGlobal() error {
+	pluginPath, err := opencodeGlobalPluginPath()
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(pluginPath), 0o755); err != nil {
+		return fmt.Errorf("create plugin dir: %w", err)
+	}
+	// Write plugin source (embedded). Overwrite if already exists — idempotent.
+	if err := os.WriteFile(pluginPath, []byte(opencodePluginSource), 0o644); err != nil {
+		return fmt.Errorf("write plugin %s: %w", pluginPath, err)
+	}
+	fmt.Println("jevrail: wrote opencode plugin to", pluginPath)
+
+	// Ensure opencode.json references the plugin. Global config lives at
+	// ~/.config/opencode/opencode.json and supports "plugin": ["./plugin/jevrail.ts"].
+	// We use a relative path so the config is portable.
+	cfgPath, err := opencodeGlobalConfigPath()
+	if err != nil {
+		return err
+	}
+	alreadyRegistered := false
+	if cfg, err := readOpencodeConfig(cfgPath); err == nil {
+		if plugins, ok := cfg["plugin"].([]any); ok {
+			for _, p := range plugins {
+				if s, _ := p.(string); s == "./plugin/jevrail.ts" {
+					alreadyRegistered = true
+				}
+				if arr, ok := p.([]any); ok && len(arr) > 0 {
+					if s, _ := arr[0].(string); s == "./plugin/jevrail.ts" {
+						alreadyRegistered = true
+					}
+				}
+			}
+		}
+	}
+	if err := ensureOpencodeConfigHasPlugin(cfgPath, "./plugin/jevrail.ts"); err != nil {
+		// Plugin file is already in place and will be auto-discovered if opencode
+		// ever enables global auto-discovery — but warn so user knows to add it.
+		fmt.Fprintln(os.Stderr, "jevrail: warning: could not update", cfgPath, ":", err)
+		fmt.Fprintln(os.Stderr, "  add manually: { \"plugin\": [\"./plugin/jevrail.ts\"] }")
+	} else if alreadyRegistered {
+		fmt.Println("jevrail: plugin already registered in", cfgPath)
+	} else {
+		fmt.Println("jevrail: registered plugin in", cfgPath)
+	}
+	fmt.Println("jevrail: run `jevrail doctor` to verify — then restart opencode")
+	return nil
+}
+
+func installOpencodeProject() error {
+	pluginPath, err := opencodeProjectPluginPath()
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(pluginPath), 0o755); err != nil {
+		return fmt.Errorf("create plugin dir: %w", err)
+	}
+	if err := os.WriteFile(pluginPath, []byte(opencodePluginSource), 0o644); err != nil {
+		return fmt.Errorf("write plugin %s: %w", pluginPath, err)
+	}
+	fmt.Println("jevrail: wrote project plugin to", pluginPath)
+	fmt.Println("jevrail: opencode auto-discovers .opencode/plugin/*.ts — no config edit needed")
+	fmt.Println("jevrail: restart opencode to activate")
+	return nil
+}
+
+func uninstallOpencode(args []string) error {
+	if hasFlag(args, "--project") {
+		return uninstallOpencodeProject()
+	}
+	return uninstallOpencodeGlobal()
+}
+
+func uninstallOpencodeGlobal() error {
+	pluginPath, err := opencodeGlobalPluginPath()
+	if err != nil {
+		return err
+	}
+	if err := os.Remove(pluginPath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("remove %s: %w", pluginPath, err)
+	}
+	fmt.Println("jevrail: removed", pluginPath)
+	cfgPath, err := opencodeGlobalConfigPath()
+	if err != nil {
+		return err
+	}
+	_ = removeOpencodeConfigPlugin(cfgPath, "./plugin/jevrail.ts")
+	// Also handle absolute-path entries that older installs may have written.
+	_ = removeOpencodeConfigPlugin(cfgPath, pluginPath)
+	fmt.Println("jevrail: removed plugin entry from", cfgPath, "(if present)")
+	return nil
+}
+
+func uninstallOpencodeProject() error {
+	pluginPath, err := opencodeProjectPluginPath()
+	if err != nil {
+		return err
+	}
+	if err := os.Remove(pluginPath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("remove %s: %w", pluginPath, err)
+	}
+	fmt.Println("jevrail: removed", pluginPath)
+	return nil
+}
+
+func ensureOpencodeConfigHasPlugin(cfgPath, pluginRef string) error {
+	cfg, err := readOpencodeConfig(cfgPath)
+	if err != nil {
+		return err
+	}
+	if err := backupFile(cfgPath); err != nil && !os.IsNotExist(err) {
+		fmt.Fprintln(os.Stderr, "jevrail: warning: could not back up opencode.json:", err)
+	}
+	plugins, _ := cfg["plugin"].([]any)
+	for _, p := range plugins {
+		switch v := p.(type) {
+		case string:
+			if v == pluginRef {
+				return nil
+			}
+		case []any:
+			if len(v) > 0 {
+				if s, _ := v[0].(string); s == pluginRef {
+					return nil
+				}
+			}
+		}
+	}
+	plugins = append(plugins, pluginRef)
+	cfg["plugin"] = plugins
+	// Preserve $schema if missing — opencode validates strictly.
+	if _, ok := cfg["$schema"]; !ok {
+		cfg["$schema"] = "https://opencode.ai/config.json"
+	}
+	return writeOpencodeConfig(cfgPath, cfg)
+}
+
+func removeOpencodeConfigPlugin(cfgPath, pluginRef string) error {
+	cfg, err := readOpencodeConfig(cfgPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	plugins, ok := cfg["plugin"].([]any)
+	if !ok || len(plugins) == 0 {
+		return nil
+	}
+	if err := backupFile(cfgPath); err != nil && !os.IsNotExist(err) {
+		fmt.Fprintln(os.Stderr, "jevrail: warning: could not back up opencode.json:", err)
+	}
+	var kept []any
+	removed := false
+	for _, p := range plugins {
+		switch v := p.(type) {
+		case string:
+			if v == pluginRef {
+				removed = true
+				continue
+			}
+		case []any:
+			if len(v) > 0 {
+				if s, _ := v[0].(string); s == pluginRef {
+					removed = true
+					continue
+				}
+			}
+		}
+		kept = append(kept, p)
+	}
+	if !removed {
+		return nil
+	}
+	if len(kept) == 0 {
+		delete(cfg, "plugin")
+	} else {
+		cfg["plugin"] = kept
+	}
+	return writeOpencodeConfig(cfgPath, cfg)
+}
+
+func readOpencodeConfig(path string) (map[string]any, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return map[string]any{}, nil
+		}
+		return nil, err
+	}
+	// Strip comments (// and /* */) — opencode.json allows JSONC.
+	stripped := stripJSONComments(string(data))
+	var m map[string]any
+	if err := json.Unmarshal([]byte(stripped), &m); err != nil {
+		return nil, fmt.Errorf("parse %s: %w", path, err)
+	}
+	if m == nil {
+		m = map[string]any{}
+	}
+	return m, nil
+}
+
+func writeOpencodeConfig(path string, m map[string]any) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	data, err := json.MarshalIndent(m, "", "  ")
+	if err != nil {
+		return err
+	}
+	// opencode.json is JSONC-tolerant, but we write strict JSON.
+	return os.WriteFile(path, data, 0o644)
+}
+
+func stripJSONComments(s string) string {
+	var out strings.Builder
+	inString := false
+	escaped := false
+	inLineComment := false
+	inBlockComment := false
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if inLineComment {
+			if c == '\n' {
+				inLineComment = false
+				out.WriteByte(c)
+			}
+			continue
+		}
+		if inBlockComment {
+			if c == '*' && i+1 < len(s) && s[i+1] == '/' {
+				inBlockComment = false
+				i++
+			}
+			continue
+		}
+		if inString {
+			out.WriteByte(c)
+			if escaped {
+				escaped = false
+			} else if c == '\\' {
+				escaped = true
+			} else if c == '"' {
+				inString = false
+			}
+			continue
+		}
+		if c == '"' {
+			inString = true
+			out.WriteByte(c)
+			continue
+		}
+		if c == '/' && i+1 < len(s) {
+			next := s[i+1]
+			if next == '/' {
+				inLineComment = true
+				i++
+				continue
+			}
+			if next == '*' {
+				inBlockComment = true
+				i++
+				continue
+			}
+		}
+		out.WriteByte(c)
+	}
+	return out.String()
+}
+
 // --- doctor -------------------------------------------------------------
 
 func cmdDoctor(args []string) error {
@@ -260,6 +581,36 @@ func cmdDoctor(args []string) error {
 			fmt.Println("✓ claude hook: installed in", path)
 		} else {
 			fmt.Println("✗ claude hook: not installed — run `jevrail install --agent claude`")
+		}
+	}
+
+	if p, err := opencodeGlobalPluginPath(); err == nil {
+		if _, err := os.Stat(p); err == nil {
+			fmt.Println("✓ opencode hook: installed in", p)
+			// Also check config registration
+			if cfgPath, err := opencodeGlobalConfigPath(); err == nil {
+				if cfg2, err := readOpencodeConfig(cfgPath); err == nil {
+					found := false
+					if plugins, ok := cfg2["plugin"].([]any); ok {
+						for _, pl := range plugins {
+							if s, _ := pl.(string); s == "./plugin/jevrail.ts" {
+								found = true
+							}
+						}
+					}
+					if !found {
+						fmt.Println("! opencode hook: plugin file exists but not registered in", cfgPath)
+						fmt.Println("  hint:        run `jevrail install --agent opencode` again")
+					}
+				}
+			}
+		} else {
+			fmt.Println("✗ opencode hook: not installed — run `jevrail install --agent opencode`")
+		}
+	}
+	if pp, err := opencodeProjectPluginPath(); err == nil {
+		if _, err := os.Stat(pp); err == nil {
+			fmt.Println("✓ opencode hook: also installed (project) in", pp)
 		}
 	}
 

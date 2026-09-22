@@ -63,15 +63,15 @@ func usage() {
 	fmt.Fprint(os.Stderr, `jevrail â€” a probability-scored pre-execution guard for coding agents
 
 Usage:
-  jevrail hook <claude|codex>   Hook target: reads agent JSON on stdin, writes a decision
-  jevrail explain "<cmd>"       Dry-run a command through the full pipeline
-  jevrail install --agent NAME  Install the PreToolUse hook for an agent
-  jevrail uninstall --agent NAME Remove the hook for an agent
-  jevrail log [-n N]            Show the last N audit log entries (default 20)
-  jevrail doctor                Check config, API key, and hook install
+  jevrail hook <claude|codex|opencode>   Hook target: reads agent JSON on stdin, writes a decision
+  jevrail explain "<cmd>"                Dry-run a command through the full pipeline
+  jevrail install --agent NAME           Install the PreToolUse hook for an agent (claude, opencode)
+  jevrail uninstall --agent NAME         Remove the hook for an agent
+  jevrail log [-n N]                     Show the last N audit log entries (default 20)
+  jevrail doctor                         Check config, API key, and hook install
   jevrail eval <corpus.jsonl> [--adversarial] [--no-model]  Run the benchmark corpus
-  jevrail exec -- <cmd>         Evaluate then optionally execute a command (hookless fallback)
-  jevrail configure [--key KEY] Store your Jev API key once (0600) — all commands reuse it
+  jevrail exec -- <cmd>                  Evaluate then optionally execute a command (hookless fallback)
+  jevrail configure [--key KEY]          Store your Jev API key once (0600) — all commands reuse it
 
 Status: MVP. See plan.md for the full design and open questions.
 `)
@@ -81,12 +81,12 @@ Status: MVP. See plan.md for the full design and open questions.
 
 func cmdHook(args []string) error {
 	if len(args) < 1 {
-		return fmt.Errorf("usage: jevrail hook <claude|codex>")
+		return fmt.Errorf("usage: jevrail hook <claude|codex|opencode>")
 	}
 	agentName := args[0]
 	ad, ok := adapter.ByName(agentName)
 	if !ok {
-		return fmt.Errorf("unknown agent %q (want claude or codex)", agentName)
+		return fmt.Errorf("unknown agent %q (want claude, codex, or opencode)", agentName)
 	}
 
 	stdin, err := io.ReadAll(os.Stdin)

