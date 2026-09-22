@@ -29,7 +29,7 @@ type opencodeInput struct {
 
 type opencodeOutput struct {
 	Decision string `json:"decision"` // allow | ask | deny
-	Reason   string `json:"reason"`
+	Reason   string `json:"reason,omitempty"`
 }
 
 func (OpenCodeAdapter) Decode(stdin []byte) (Event, error) {
@@ -57,7 +57,7 @@ func (OpenCodeAdapter) Decode(stdin []byte) (Event, error) {
 }
 
 func (OpenCodeAdapter) Encode(verdict, reason string) ([]byte, int) {
-	out := opencodeOutput{Decision: verdict, Reason: reason}
+	out := opencodeOutput{Decision: verdict, Reason: visibleReason(verdict, reason)}
 	b, _ := json.Marshal(out)
 	exitCode := 0
 	if verdict == "deny" {

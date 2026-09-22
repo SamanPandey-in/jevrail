@@ -30,6 +30,12 @@ type claudeHookSpecificOutput struct {
 }
 
 type claudeOutput struct {
+	// SystemMessage is rendered to the user in the terminal. permissionDecisionReason
+	// (inside HookSpecificOutput) is what Claude Code feeds back to the model — the two
+	// audiences are different, and Claude Code does not automatically mirror one to the
+	// other. Without this field, an "ask"/"deny" verdict can go out with a reason that
+	// only the model sees, leaving the person at the keyboard with no explanation.
+	SystemMessage      string                   `json:"systemMessage,omitempty"`
 	HookSpecificOutput claudeHookSpecificOutput `json:"hookSpecificOutput"`
 }
 
@@ -55,6 +61,7 @@ func (ClaudeAdapter) Decode(stdin []byte) (Event, error) {
 
 func (ClaudeAdapter) Encode(verdict, reason string) ([]byte, int) {
 	out := claudeOutput{
+		SystemMessage: visibleReason(verdict, reason),
 		HookSpecificOutput: claudeHookSpecificOutput{
 			HookEventName:            "PreToolUse",
 			PermissionDecision:       verdict,

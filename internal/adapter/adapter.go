@@ -23,6 +23,27 @@ type Adapter interface {
 	Encode(verdict, reason string) (stdout []byte, exitCode int)
 }
 
+// visibleReason decides whether a verdict's reason should be surfaced to the
+// person at the keyboard, not just fed back to the model. Centralized here
+// so every adapter — the three below and any added later — shares one
+// policy instead of each reimplementing the verdict check: "allow" stays
+// silent by design (see README: below-threshold harms allow silently),
+// "ask" and "deny" always carry an explanation.
+//
+// This only decides *whether* a reason is user-visible, not *where* it goes
+// in the wire format — that's still each adapter's job, because agents
+// disagree on shape. Claude Code splits model-facing (permissionDecisionReason)
+// and user-facing (systemMessage) text into separate JSON fields; codex and
+// opencode currently have just one "reason" field carrying both. If a future
+// agent also splits the two audiences, its adapter calls this once per field;
+// if it has one field like codex/opencode, it calls this once.
+func visibleReason(verdict, reason string) string {
+	if verdict == "ask" || verdict == "deny" {
+		return reason
+	}
+	return ""
+}
+
 // ByName returns the adapter for a given agent name ("claude", "codex", "opencode").
 func ByName(name string) (Adapter, bool) {
 	switch name {

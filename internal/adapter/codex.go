@@ -26,7 +26,7 @@ type codexInput struct {
 
 type codexOutput struct {
 	Decision string `json:"decision"` // ⚠️ verify: "allow" | "deny" | "ask"?
-	Reason   string `json:"reason"`
+	Reason   string `json:"reason,omitempty"`
 }
 
 func (CodexAdapter) Decode(stdin []byte) (Event, error) {
@@ -50,7 +50,7 @@ func (CodexAdapter) Decode(stdin []byte) (Event, error) {
 }
 
 func (CodexAdapter) Encode(verdict, reason string) ([]byte, int) {
-	out := codexOutput{Decision: verdict, Reason: reason}
+	out := codexOutput{Decision: verdict, Reason: visibleReason(verdict, reason)}
 	b, _ := json.Marshal(out)
 	exitCode := 0
 	if verdict == "deny" {
