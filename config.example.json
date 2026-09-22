@@ -1,0 +1,13 @@
+{
+  "model": "jev-1.13.0",
+  "base_url": "https://api.typesafe.ai",
+  "fail_mode": "ask",
+  "no_model": false,
+  "timeout_ms": 1500,
+  "protected_paths": ["~/.ssh", "~/.aws"],
+  "allow_paths": ["~/scratch"],
+  "bands": {
+    "destroys_uncommitted": { "ask": 0.35, "deny": 0.8 },
+    "touches_production": { "ask": 0.3, "deny": 0.75 }
+  }
+}
