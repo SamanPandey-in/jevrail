@@ -66,7 +66,7 @@ func Run(ctx context.Context, cfg config.Config, rawCommand, cwd string) Result 
 	resp, err := client.Evaluate(ctx, state, jev.Questions())
 	if err != nil {
 		res := degradedResult(rawCommand, state, cfg, start)
-		res.Reason = "jevrail (degraded — model call failed: " + err.Error() + "): " + res.Reason
+		res.Reason = "jevrail (degraded, model call failed: " + err.Error() + "): " + res.Reason
 		return res
 	}
 

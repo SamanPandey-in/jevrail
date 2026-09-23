@@ -43,7 +43,7 @@ func cmdExec(args []string) error {
 
 	switch res.Verdict {
 	case "deny":
-		return fmt.Errorf("jevrail: blocked (deny) — %s", res.Reason)
+		return fmt.Errorf("jevrail: blocked (deny) - %s", res.Reason)
 	case "ask":
 		fmt.Fprint(os.Stderr, "jevrail: this command requires confirmation [y/N]: ")
 		var ans string

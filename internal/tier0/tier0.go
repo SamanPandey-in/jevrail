@@ -82,7 +82,7 @@ func CheckHardDeny(rawLine string) (Result, bool) {
 			return Result{
 				Verdict: VerdictHardDeny,
 				Rule:    p.name,
-				Reason:  "jevrail: blocked by hard rule `" + p.name + "` — this class of command is never allowed to run.",
+				Reason:  "jevrail: blocked by hard rule `" + p.name + "`: this class of command is never allowed to run.",
 			}, true
 		}
 	}

@@ -29,7 +29,7 @@ func cmdConfigure(args []string) error {
 			return printConfigureHelp()
 		default:
 			if strings.HasPrefix(args[i], "-") {
-				return fmt.Errorf("unknown flag %q — see jevrail configure --help", args[i])
+				return fmt.Errorf("unknown flag %q (see jevrail configure --help)", args[i])
 			}
 			return fmt.Errorf("usage: jevrail configure [--key <api-key>] [--show] [--clear]")
 		}
@@ -60,16 +60,16 @@ func cmdConfigure(args []string) error {
 			key = readPassword("API key: ")
 			fmt.Println()
 			if strings.TrimSpace(key) == "" {
-				return fmt.Errorf("no key entered — aborted")
+				return fmt.Errorf("no key entered, aborted")
 			}
 		}
 	}
 	key = strings.TrimSpace(key)
 	if key == "" {
-		return fmt.Errorf("empty key — aborted")
+		return fmt.Errorf("empty key, aborted")
 	}
 	if len(key) < 10 {
-		fmt.Fprintln(os.Stderr, "jevrail: warning: key looks unusually short — saving anyway")
+		fmt.Fprintln(os.Stderr, "jevrail: warning: key looks unusually short, saving anyway")
 	}
 	cfg, err := config.Load()
 	if err != nil {
@@ -125,7 +125,7 @@ func configureShow() error {
 	if envOverriding {
 		fmt.Printf("Note: TYPESAFE_API_KEY env var is set and overrides the file (%s…)\n", maskKey(os.Getenv("TYPESAFE_API_KEY")))
 	} else if os.Getenv("TYPESAFE_API_KEY") != "" {
-		fmt.Printf("TYPESAFE_API_KEY env var is also set (%s…) — env wins at runtime\n", maskKey(os.Getenv("TYPESAFE_API_KEY")))
+		fmt.Printf("TYPESAFE_API_KEY env var is also set (%s…); env wins at runtime\n", maskKey(os.Getenv("TYPESAFE_API_KEY")))
 	}
 	return nil
 }
@@ -136,7 +136,7 @@ func configureClear() error {
 		fmt.Fprintln(os.Stderr, "jevrail: warning: could not load config:", err)
 	}
 	if cfg.APIKey == "" && os.Getenv("TYPESAFE_API_KEY") == "" {
-		fmt.Println("No API key stored — nothing to clear.")
+		fmt.Println("No API key stored. Nothing to clear.")
 		return nil
 	}
 	cfg.APIKey = ""
@@ -146,13 +146,13 @@ func configureClear() error {
 	path, _ := config.Path()
 	fmt.Printf("✓ API key removed from %s\n", path)
 	if os.Getenv("TYPESAFE_API_KEY") != "" {
-		fmt.Println("Note: TYPESAFE_API_KEY is still set in your environment — unset it to fully clear.")
+		fmt.Println("Note: TYPESAFE_API_KEY is still set in your environment. Unset it to fully clear.")
 	}
 	return nil
 }
 
 func printConfigureHelp() error {
-	fmt.Print(`jevrail configure — store your Jev API key once
+	fmt.Print(`jevrail configure: store your Jev API key once
 
 Usage:
   jevrail configure                  Prompt securely and save to ~/.config/jevrail/config.json (0600)

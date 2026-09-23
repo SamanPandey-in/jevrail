@@ -60,7 +60,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprint(os.Stderr, `jevrail â€” a probability-scored pre-execution guard for coding agents
+	fmt.Fprint(os.Stderr, `jevrail is a probability-scored pre-execution guard for coding agents
 
 Usage:
   jevrail hook <claude|codex|opencode>   Hook target: reads agent JSON on stdin, writes a decision
@@ -71,7 +71,7 @@ Usage:
   jevrail doctor                         Check config, API key, and hook install
   jevrail eval <corpus.jsonl> [--adversarial] [--no-model]  Run the benchmark corpus
   jevrail exec -- <cmd>                  Evaluate then optionally execute a command (hookless fallback)
-  jevrail configure [--key KEY]          Store your Jev API key once (0600) — all commands reuse it
+  jevrail configure [--key KEY]          Store your Jev API key once (0600); all commands reuse it
 
 Status: MVP. See plan.md for the full design and open questions.
 `)

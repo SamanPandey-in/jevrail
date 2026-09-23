@@ -32,7 +32,7 @@ func cmdInstall(args []string) error {
 	case "claude":
 		return installClaude()
 	case "codex":
-		return fmt.Errorf("codex install is not implemented yet — the hook schema is unverified " +
+		return fmt.Errorf("codex install is not implemented yet - the hook schema is unverified " +
 			"(see internal/adapter/codex.go). Register `jevrail hook codex` manually once confirmed")
 	case "opencode":
 		return installOpencode(args)
@@ -300,7 +300,7 @@ func installOpencodeGlobal() error {
 	} else {
 		fmt.Println("jevrail: registered plugin in", cfgPath)
 	}
-	fmt.Println("jevrail: run `jevrail doctor` to verify — then restart opencode")
+	fmt.Println("jevrail: run `jevrail doctor` to verify - then restart opencode")
 	return nil
 }
 
@@ -316,7 +316,7 @@ func installOpencodeProject() error {
 		return fmt.Errorf("write plugin %s: %w", pluginPath, err)
 	}
 	fmt.Println("jevrail: wrote project plugin to", pluginPath)
-	fmt.Println("jevrail: opencode auto-discovers .opencode/plugin/*.ts — no config edit needed")
+	fmt.Println("jevrail: opencode auto-discovers .opencode/plugin/*.ts - no config edit needed")
 	fmt.Println("jevrail: restart opencode to activate")
 	return nil
 }
@@ -537,7 +537,7 @@ func cmdDoctor(args []string) error {
 	} else {
 		fmt.Println("✓ config:      loaded (model =", cfg.Model+", base_url =", cfg.BaseURL+")")
 		if cfg.Model == "jev-latest" {
-			fmt.Println("! model:       using jev-latest — pin a version (e.g. jev-1.13.0) for reproducibility")
+			fmt.Println("! model:       using jev-latest - pin a version (e.g. jev-1.13.0) for reproducibility")
 		}
 		if cfg.TimeoutMs < 500 || cfg.TimeoutMs > 5000 {
 			fmt.Printf("! timeout:     timeout_ms=%d is outside recommended 500–5000 range\n", cfg.TimeoutMs)
@@ -547,13 +547,13 @@ func cmdDoctor(args []string) error {
 	if cfg.NoModel {
 		fmt.Println("i model:       no_model=true, running deterministic-only (nothing leaves this machine)")
 	} else if cfg.APIKey == "" {
-		fmt.Println("✗ api key:     not set — run `jevrail configure` to store it once (or export TYPESAFE_API_KEY)")
+		fmt.Println("✗ api key:     not set - run `jevrail configure` to store it once (or export TYPESAFE_API_KEY)")
 		fmt.Println("  hint:        get a key from https://typesafe.ai or your gateway, then `jevrail configure --key <key>`")
 	} else {
 		fmt.Println("✓ api key:     present")
 		// Lightweight reachability check: HEAD the base URL (no auth leak).
 		if err := checkAPIReachable(cfg.BaseURL); err != nil {
-			fmt.Println("! api reach:  could not reach", cfg.BaseURL, "—", err)
+			fmt.Println("! api reach:  could not reach", cfg.BaseURL, "-", err)
 			fmt.Println("  hint:        check base_url and network; jevrail will fall back to degraded mode")
 		} else {
 			fmt.Println("✓ api reach: ", cfg.BaseURL, "reachable")
@@ -580,7 +580,7 @@ func cmdDoctor(args []string) error {
 		if installed {
 			fmt.Println("✓ claude hook: installed in", path)
 		} else {
-			fmt.Println("✗ claude hook: not installed — run `jevrail install --agent claude`")
+			fmt.Println("✗ claude hook: not installed - run `jevrail install --agent claude`")
 		}
 	}
 
@@ -605,7 +605,7 @@ func cmdDoctor(args []string) error {
 				}
 			}
 		} else {
-			fmt.Println("✗ opencode hook: not installed — run `jevrail install --agent opencode`")
+			fmt.Println("✗ opencode hook: not installed - run `jevrail install --agent opencode`")
 		}
 	}
 	if pp, err := opencodeProjectPluginPath(); err == nil {

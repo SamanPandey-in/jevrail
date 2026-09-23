@@ -1,15 +1,15 @@
-# Jevrail — a probability-scored pre-execution guard for terminal coding agents
+# Jevrail: a probability-scored pre-execution guard for terminal coding agents
 
 > Working name: `Jevrail`. Language: Go. Model: Jev (TypeSafe AI System One).
 > Status: plan v1. Items marked ⚠️ are things I could not verify and you must check in current docs before coding against them.
 
 ---
 
-## 0. TL;DR — the decisions
+## 0. TL;DR: the decisions
 
 | Question | Decision |
 |---|---|
-| CLI or something else? | **A single Go binary that is a CLI, but used as a hook target — not a terminal watcher.** Claude Code and Codex both fire a `PreToolUse` hook that can block a command before it runs. That is the only supported interception point that can *prevent* damage. Watching a terminal only tells you after the fact. |
+| CLI or something else? | **A single Go binary that is a CLI, but used as a hook target: not a terminal watcher.** Claude Code and Codex both fire a `PreToolUse` hook that can block a command before it runs. That is the only supported interception point that can *prevent* damage. Watching a terminal only tells you after the fact. |
 | Daemon? | **Not in the MVP.** Add a local unix-socket daemon in Phase 2, only to reuse the HTTPS connection and cache decisions. |
 | What does Jev do? | Answers ~7 typed questions about a command plus its real context (git state, cwd, env hints, script bodies) in **one call**. Returns probabilities. |
 | What does code do? | Everything Jev is bad at: parsing, path resolution, counting files, git stats, thresholds, final allow/ask/deny. |
@@ -28,17 +28,17 @@ Coding agents run shell commands. Sometimes those commands destroy uncommitted w
 
 ### Prior art you must know about
 
-- **dcg (Destructive Command Guard)** — mature, open source, Rust, deterministic. Reported to hook into Claude Code, Codex CLI, Gemini CLI, Copilot CLI and others, with 49+ "packs" (databases, Kubernetes, cloud, etc.) and sub-millisecond matching. Its design is fail-open on timeouts/parse errors.
-- **claude-code-command-guard**, **ai-agent-guardrails**, **quality-guard** — smaller rule-based guards, some fail-closed.
+- **dcg (Destructive Command Guard)**: mature, open source, Rust, deterministic. Reported to hook into Claude Code, Codex CLI, Gemini CLI, Copilot CLI and others, with 49+ "packs" (databases, Kubernetes, cloud, etc.) and sub-millisecond matching. Its design is fail-open on timeouts/parse errors.
+- **claude-code-command-guard**, **ai-agent-guardrails**, **quality-guard**: smaller rule-based guards, some fail-closed.
 - Claude Code's own permission modes. One third-party README says there is also a built-in server-side classifier ⚠️ verify.
 
 ### What jevrail does that regex guards cannot
 
 Regex guards match *shapes*. They cannot answer questions that depend on **context** or **meaning**:
 
-1. `rm -rf ./dist` — harmless in one repo, catastrophic in another where `dist` is tracked and dirty. Only context knows.
-2. `./cleanup.sh` — a regex sees nothing. jevrail reads the script body (bounded) and asks Jev about what it does.
-3. `psql $DATABASE_URL -c "DELETE FROM users"` — is that env var pointing at prod? Regex cannot say.
+1. `rm -rf ./dist`: harmless in one repo, catastrophic in another where `dist` is tracked and dirty. Only context knows.
+2. `./cleanup.sh`: a regex sees nothing. jevrail reads the script body (bounded) and asks Jev about what it does.
+3. `psql $DATABASE_URL -c "DELETE FROM users"`: is that env var pointing at prod? Regex cannot say.
 4. **Calibrated probabilities**, so thresholds are per-harm and tunable instead of one global block/allow.
 5. (v2) **Intent alignment**: capture the user's prompt via `UserPromptSubmit` and ask "did the user ask for this?".
 
@@ -89,13 +89,13 @@ Phase 2 adds: `jevrail hook` becomes a thin client that talks to `jevrail daemon
 
 ### The pipeline in words
 
-1. **Tier 0 hard-deny** (deterministic, final): `rm -rf /`, `rm -rf ~`, `rm -rf /*`, fork bombs, `mkfs*` on a device, `dd of=/dev/…`, `git push --force` to the default branch, `DROP DATABASE`, `curl … | sh`-style pipes to a shell. Small list on purpose — dcg has the big one.
+1. **Tier 0 hard-deny** (deterministic, final): `rm -rf /`, `rm -rf ~`, `rm -rf /*`, fork bombs, `mkfs*` on a device, `dd of=/dev/…`, `git push --force` to the default branch, `DROP DATABASE`, `curl … | sh`-style pipes to a shell. Small list on purpose: dcg has the big one.
 2. **Tier 0 fast-allow**: only if the parsed AST is a single simple command from a short read-only allowlist (`ls`, `cat`, `git status`, `git diff`, `git log`, `pwd`, `echo` …) with no redirects, no substitutions, no pipes into a shell. Skips Jev entirely.
 3. Everything else → **context + Jev + policy**.
 4. **Jev unreachable / timeout (1.5 s budget)** → fall back by risk class:
-   - AST contains a "dangerous keyword" (`rm`, `git reset`, `git clean`, `drop`, `truncate`, `delete`, `dd`, `mkfs`, `push --force`, `kubectl delete`, `terraform destroy`, …) → **ask**.
-   - Otherwise → allow, logged as `degraded`.
-   - Both are configurable (`fail_mode = "ask" | "allow" | "deny"`).
+  : AST contains a "dangerous keyword" (`rm`, `git reset`, `git clean`, `drop`, `truncate`, `delete`, `dd`, `mkfs`, `push --force`, `kubectl delete`, `terraform destroy`, …) → **ask**.
+  : Otherwise → allow, logged as `degraded`.
+  : Both are configurable (`fail_mode = "ask" | "allow" | "deny"`).
 
 ---
 
@@ -109,7 +109,7 @@ Rules from Jev's own docs and the launch write-ups that shape this: it **reads l
 
 ### API contract (verified from TypeSafe's API reference and gateway docs)
 
-`POST https://api.typesafe.ai/v1/systemone`, `Authorization: Bearer <key>`, body `{model, state, questions}` where each question has `type` = `noul | choice | score`, `instructions`, and `criteria` (choice: `{option: description}`, up to 255 options; score: ordered array of 2–10 level descriptions; noul: none). Response: `{model, answers, usage}`; Noul → `noul` (0–1, probability of yes, no confidence field); Choice → `choice`, `probabilities`, `confidence`; Score → `score` (can be fractional), `probabilities`, `confidence`. Env var used by TypeSafe SDKs: `TYPESAFE_API_KEY`. Pin the model (`jev-1.13.0` was the resolved `jev-latest` at the time of writing) — `jev-latest` can change answers under you.
+`POST https://api.typesafe.ai/v1/systemone`, `Authorization: Bearer <key>`, body `{model, state, questions}` where each question has `type` = `noul | choice | score`, `instructions`, and `criteria` (choice: `{option: description}`, up to 255 options; score: ordered array of 2–10 level descriptions; noul: none). Response: `{model, answers, usage}`; Noul → `noul` (0–1, probability of yes, no confidence field); Choice → `choice`, `probabilities`, `confidence`; Score → `score` (can be fractional), `probabilities`, `confidence`. Env var used by TypeSafe SDKs: `TYPESAFE_API_KEY`. Pin the model (`jev-1.13.0` was the resolved `jev-latest` at the time of writing): `jev-latest` can change answers under you.
 
 Several third-party gateways expose a compatible `/v1/systemone`, so **the base URL must be configurable** and the client sits behind an interface.
 
@@ -279,7 +279,7 @@ Instructions are written to be **literal and self-contained** because Jev answer
 
 ## 5. State schema (what Jev sees)
 
-Keep it small. Redact before sending — commands and repo context go to a third-party API.
+Keep it small. Redact before sending: commands and repo context go to a third-party API.
 
 ```json
 {
@@ -307,7 +307,7 @@ Rules:
 
 ## 6. Policy: from probabilities to a decision
 
-Noul has no confidence field — the number is the belief — so thresholds apply directly. The values below are **starting guesses, not measured**; Phase 3 tunes them against the benchmark.
+Noul has no confidence field, the number is the belief, so thresholds apply directly. The values below are **starting guesses, not measured**; Phase 3 tunes them against the benchmark.
 
 | Max harm probability | Action |
 |---|---|
@@ -469,7 +469,7 @@ type Adapter interface {
 
 ### Later: other tools
 
-- `Write`/`Edit` matchers (overwriting an uncommitted file is also data loss) — v2.
+- `Write`/`Edit` matchers (overwriting an uncommitted file is also data loss): v2.
 - `jevrail exec -- <cmd>`: a shim for agents with no hook support. Same pipeline, invoked as a wrapper.
 
 ---
@@ -490,7 +490,7 @@ Use the stdlib `flag` package with a subcommand switch. No Cobra in v1.
 
 ---
 
-## 9. Evaluation — the part that makes this credible
+## 9. Evaluation: the part that makes this credible
 
 TypeSafe's own numbers are self-run and unreproduced by third parties, and their "accuracy" is agreement with two frontier models, not ground truth. So you produce **your own** evidence.
 
@@ -572,8 +572,8 @@ jevrail/
 ```
 
 Dependencies (keep it tiny):
-- `mvdan.cc/sh/v3/syntax` — Go shell parser (⚠️ verify current API; check how comments are handled so you can drop them).
-- A TOML library for config (`github.com/pelletier/go-toml/v2`) — or JSON to avoid a dependency.
+- `mvdan.cc/sh/v3/syntax`: Go shell parser (⚠️ verify current API; check how comments are handled so you can drop them).
+- A TOML library for config (`github.com/pelletier/go-toml/v2`): or JSON to avoid a dependency.
 - Standard library for everything else: `net/http`, `encoding/json`, `log/slog`, `os/exec` (for `git`), `flag`.
 - **No** SQLite, TUI, Cobra, or daemon in the MVP.
 
@@ -587,12 +587,12 @@ Distribution: `go install`, goreleaser binaries, Homebrew tap.
 
 | Phase | Deliverable | Gate to continue |
 |---|---|---|
-| **0 — Spike (1 day)** | `jev/client.go` + a throwaway `main.go` that sends ~50 hand-picked commands (25 safe, 25 dangerous, context filled by hand) and prints probabilities | Jev separates them convincingly. If not, fix question wording first; if it still fails, stop and rethink. |
-| **1 — MVP (≈1 week)** | `jevrail hook claude`, Tier 0, context collectors (git + paths), Jev call, policy, JSONL audit, `install`, `explain` | You dogfood it for a few days on real Claude Code sessions with an acceptable false-ask rate |
-| **2 — Breadth** | Codex adapter, script-body reading, env hints, config file, daemon + cache, `doctor` | Works on both agents with p95 overhead you can live with |
-| **3 — Evidence** | Corpus (300+), `eval`, calibration report, red-team fuzzer, tuned bands, README with honest results | Published numbers, including where it loses |
-| **4 — Polish** | `log` viewer, `exec` shim, Write/Edit matchers, goreleaser, Homebrew | Someone else installs it in <5 minutes |
-| **5 — Stretch** | Intent alignment via `UserPromptSubmit`, team-shared policy, `--replay` across model versions | — |
+| **0: Spike (1 day)** | `jev/client.go` + a throwaway `main.go` that sends ~50 hand-picked commands (25 safe, 25 dangerous, context filled by hand) and prints probabilities | Jev separates them convincingly. If not, fix question wording first; if it still fails, stop and rethink. |
+| **1: MVP (≈1 week)** | `jevrail hook claude`, Tier 0, context collectors (git + paths), Jev call, policy, JSONL audit, `install`, `explain` | You dogfood it for a few days on real Claude Code sessions with an acceptable false-ask rate |
+| **2: Breadth** | Codex adapter, script-body reading, env hints, config file, daemon + cache, `doctor` | Works on both agents with p95 overhead you can live with |
+| **3: Evidence** | Corpus (300+), `eval`, calibration report, red-team fuzzer, tuned bands, README with honest results | Published numbers, including where it loses |
+| **4: Polish** | `log` viewer, `exec` shim, Write/Edit matchers, goreleaser, Homebrew | Someone else installs it in <5 minutes |
+| **5: Stretch** | Intent alignment via `UserPromptSubmit`, team-shared policy, `--replay` across model versions | n/a |
 
 Explicitly **not** doing early: hosted service, GUI, Windows support, custom model, multi-agent orchestration.
 
@@ -600,10 +600,10 @@ Explicitly **not** doing early: hosted service, GUI, Windows support, custom mod
 
 ## 13. Open questions to resolve before Phase 1
 
-1. Exact Claude Code hook stdin fields (`cwd`, `session_id`, `transcript_path`) and timeouts — read the current hooks reference.
+1. Exact Claude Code hook stdin fields (`cwd`, `session_id`, `transcript_path`) and timeouts: read the current hooks reference.
 2. Codex hook stdin/output schema, whether `ask` exists, how hooks are enabled.
-3. Score answer `probabilities` shape (array vs map) — check docs.typesafe.ai/api.
-4. Jev early access is waitlisted — confirm you have a key (or use a compatible gateway) before Phase 0.
+3. Score answer `probabilities` shape (array vs map): check docs.typesafe.ai/api.
+4. Jev early access is waitlisted: confirm you have a key (or use a compatible gateway) before Phase 0.
 5. Whether current Jev rate limits and pricing still match the launch-week figures.
 6. Licensing of any corpus you borrow.
 

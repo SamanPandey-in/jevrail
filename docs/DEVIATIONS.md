@@ -5,7 +5,7 @@ and where the two disagree.
 
 1. **Config is JSON, not TOML.** `plan.md` §6/§11 sketches a `config.toml`.
    The code uses `~/.config/jevrail/config.json` instead, so the MVP has
-   zero external dependencies — `go.mod` has no `require` lines at all.
+   zero external dependencies: `go.mod` has no `require` lines at all.
    Swap in `github.com/pelletier/go-toml/v2` later; only
    `internal/config/config.go` needs to change.
 
@@ -13,13 +13,13 @@ and where the two disagree.
    parser. `internal/shellparse` is a small hand-rolled tokenizer instead:
    good enough to split on `; && || |`, honor quotes, strip comments, pull
    out `$(...)`/backtick substitutions, and recurse into `bash -c` /
-   `sh -c` payloads — but it is *not* a full POSIX parser. Exotic shell
+   `sh -c` payloads: but it is *not* a full POSIX parser. Exotic shell
    syntax (process substitution, complex heredocs, brace expansion) falls
    through to `Unparsed: true`, which `tier0.IsFastAllow` and the policy's
    fail-safe handling both treat as non-trivial rather than silently
    ignoring.
 
-3. **`jevrail eval` is now implemented** (`internal/eval`, `cmd/jevrail/eval.go`). `jevrail eval <corpus.jsonl> [--adversarial] [--no-model]` prints recall on catastrophic, false-ask rate on safe, tier0-only baseline, latency, and per-entry triggers. `testdata/corpus/corpus.jsonl` now has 80 entries covering safe/risky/catastrophic, obfuscation (`bash -c`, `$(…)`, `python -c`) and adversarial persuasive comments; `sample.jsonl` (8 lines) is kept as a minimal example. Thresholds in `internal/policy/policy.go` are still *starting guesses* — tune them against a larger labeled corpus before trusting them.
+3. **`jevrail eval` is now implemented** (`internal/eval`, `cmd/jevrail/eval.go`). `jevrail eval <corpus.jsonl> [--adversarial] [--no-model]` prints recall on catastrophic, false-ask rate on safe, tier0-only baseline, latency, and per-entry triggers. `testdata/corpus/corpus.jsonl` now has 80 entries covering safe/risky/catastrophic, obfuscation (`bash -c`, `$(…)`, `python -c`) and adversarial persuasive comments; `sample.jsonl` (8 lines) is kept as a minimal example. Thresholds in `internal/policy/policy.go` are still *starting guesses*: tune them against a larger labeled corpus before trusting them.
 
 4. **`jevrail daemon` (Phase 2) does not exist.** Every `jevrail hook`
    invocation pays a fresh process start and, when the model is consulted,
