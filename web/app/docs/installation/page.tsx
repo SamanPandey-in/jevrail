@@ -117,7 +117,7 @@ export default function InstallationPage() {
           <p className="text-muted-foreground leading-relaxed mb-4 text-[15px]">
             Pick whichever fits: a direct install for a quick try, or a source checkout while jevrail is still pre-release.
           </p>
-          <InstallTabs />
+          <InstallTabs surface="installation_doc" />
           <p className="text-muted-foreground leading-relaxed mt-4 text-[15px]">
             Either way, the binary lands in <code className="bg-secondary/60 border border-border text-primary rounded px-1.5 py-0.5 text-[13px] font-mono">$GOPATH/bin</code>{" "}
             or <code className="bg-secondary/60 border border-border text-primary rounded px-1.5 py-0.5 text-[13px] font-mono">$HOME/go/bin</code>. Make sure that&apos;s on your <code className="bg-secondary/60 border border-border text-primary rounded px-1.5 py-0.5 text-[13px] font-mono">PATH</code>.
@@ -230,7 +230,11 @@ export default function InstallationPage() {
           </ul>
 
           <div className="flex flex-wrap items-center justify-between gap-4 mt-4 pt-6 border-t border-border">
-            <ShareOnXButton text="Got JevRail installed and guarding my coding agent in under 5 minutes." variant="link" />
+            <ShareOnXButton
+              text="Got JevRail installed and guarding my coding agent in under 5 minutes."
+              variant="link"
+              placement="installation_doc"
+            />
           </div>
 
           <div className="flex items-center justify-between gap-4 mt-6 pt-8 border-t border-border">

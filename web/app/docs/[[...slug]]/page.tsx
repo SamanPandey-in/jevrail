@@ -95,6 +95,7 @@ export default async function DocsPage({
             <ShareOnXButton
               text={`Reading up on "${entry.title}" in the JevRail docs.`}
               variant="link"
+              placement="docs_page"
             />
           </div>
 

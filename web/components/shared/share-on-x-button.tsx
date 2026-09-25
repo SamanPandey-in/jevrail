@@ -2,6 +2,7 @@
 
 import { XIcon } from "@/components/shared/x-icon";
 import { SITE_URL, X_HANDLE } from "@/lib/site";
+import { track } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
 type ShareOnXButtonProps = {
@@ -10,13 +11,24 @@ type ShareOnXButtonProps = {
   className?: string;
   /** "button" (solid pill) or "link" (plain text link, e.g. inline in docs footer). */
   variant?: "button" | "link";
+  /** Which surface this button lives on, e.g. "hero" or "docs_header". */
+  placement?: string;
 };
 
-export function ShareOnXButton({ text, className, variant = "button" }: ShareOnXButtonProps) {
+export function ShareOnXButton({
+  text,
+  className,
+  variant = "button",
+  placement,
+}: ShareOnXButtonProps) {
   const shareUrl = `https://x.com/intent/tweet?${new URLSearchParams({
     text: `${text}\n\n@typesafeai ${X_HANDLE}`,
     url: SITE_URL,
   })}`;
+
+  const onShare = () => {
+    track("share_on_x_clicked", { placement, variant });
+  };
 
   if (variant === "link") {
     return (
@@ -24,6 +36,7 @@ export function ShareOnXButton({ text, className, variant = "button" }: ShareOnX
         href={shareUrl}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={onShare}
         className={cn(
           "inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors",
           className
@@ -40,6 +53,7 @@ export function ShareOnXButton({ text, className, variant = "button" }: ShareOnX
       href={shareUrl}
       target="_blank"
       rel="noopener noreferrer"
+      onClick={onShare}
       className={cn(
         "inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-secondary/40 hover:bg-secondary/70 text-sm font-medium text-foreground transition-colors",
         className

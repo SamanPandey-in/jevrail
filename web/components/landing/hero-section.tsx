@@ -7,6 +7,7 @@ import { GithubIcon as Github } from "@/components/shared/github-icon";
 import { AsciiWave } from "./ascii-wave";
 import { ShareOnXButton } from "@/components/shared/share-on-x-button";
 import { InstallTabs } from "@/components/docs/InstallTabs";
+import { track } from "@/lib/analytics";
 
 export function HeroSection() {
   const [isVisible, setIsVisible] = useState(false);
@@ -63,19 +64,24 @@ export function HeroSection() {
         
         {/* Install command */}
         <div className={`max-w-2xl mx-auto mb-20 transition-all duration-700 delay-300 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
-          <InstallTabs compact />
+          <InstallTabs compact surface="hero" />
           {/* <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
             <span className="text-primary/90">Ultra low latency and high accuracy</span>
             </div> */}
           <div className="mt-4 flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-md text-muted-foreground">
             <Link
               href="/docs/installation"
+              onClick={() => track("nav_link_clicked", { label: "Full installation guide", href: "/docs/installation" })}
               className="inline-flex items-center gap-1.5 text-md font-medium text-primary hover:text-primary/80 transition-colors"
             >
               Full installation guide
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
-            <ShareOnXButton text="Give your AI agents autonomy, not unlimited access: check out JevRail." variant="link" />
+            <ShareOnXButton
+              text="Give your AI agents autonomy, not unlimited access: check out JevRail."
+              variant="link"
+              placement="hero"
+            />
           </div>
         </div>
         

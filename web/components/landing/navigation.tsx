@@ -6,12 +6,13 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { GithubIcon as Github } from "@/components/shared/github-icon";
+import { GITHUB_URL } from "@/lib/site";
+import { track } from "@/lib/analytics";
 
 const navLinks = [
   { name: "Install", href: "/docs/installation" },
   { name: "Docs", href: "/docs" },
 ];
-const githubUrl = "https://github.com/SamanPandey-in/jevrail"; 
 
 export function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -24,6 +25,14 @@ export function Navigation() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  const onStar = (placement: string) => {
+    track("github_star_clicked", { placement });
+  };
+
+  const onNavLink = (name: string, href: string) => {
+    track("nav_link_clicked", { label: name, href });
+  };
 
   return (
     <header className="pointer-events-none fixed inset-x-0 top-0 z-50 px-4 pt-4 sm:px-6 sm:pt-5">
@@ -53,6 +62,7 @@ export function Navigation() {
               <Link
                 key={link.name}
                 href={link.href}
+                onClick={() => onNavLink(link.name, link.href)}
                 className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors duration-200 rounded-lg hover:bg-secondary/50"
               >
                 {link.name}
@@ -63,7 +73,7 @@ export function Navigation() {
           {/* GitHub link */}
           <div className="hidden md:flex items-center gap-3">
             <Button asChild size="sm" className="bg-foreground hover:bg-foreground/90 text-background">
-              <a href={githubUrl} target="_blank" rel="noreferrer">
+              <a href={GITHUB_URL} target="_blank" rel="noreferrer" onClick={() => onStar("nav_desktop")}>
                 <Github className="w-4 h-4 mr-2" />
                 Star on GitHub
               </a>
@@ -95,7 +105,10 @@ export function Navigation() {
               <Link
                 key={link.name}
                 href={link.href}
-                onClick={() => setIsMobileMenuOpen(false)}
+                onClick={() => {
+                  onNavLink(link.name, link.href);
+                  setIsMobileMenuOpen(false);
+                }}
                 className="px-4 py-3 text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-colors"
               >
                 {link.name}
@@ -103,7 +116,7 @@ export function Navigation() {
             ))}
             <div className="flex flex-col gap-2 pt-4 mt-2 border-t border-border/50">
               <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                <a href={githubUrl} target="_blank" rel="noreferrer">
+                <a href={GITHUB_URL} target="_blank" rel="noreferrer" onClick={() => onStar("nav_mobile")}>
                   <Github className="w-4 h-4 mr-2" />
                   Star on GitHub
                 </a>

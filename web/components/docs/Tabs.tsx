@@ -18,14 +18,23 @@ export function Tabs({
   items,
   defaultValue,
   centerTabs = false,
+  onChange,
 }: {
   items: TabItem[];
   defaultValue?: string;
   /** Center the tab-picker pill itself (e.g. in a centered hero) instead of left-aligning it. */
   centerTabs?: boolean;
+  /** Fired with the newly selected tab's value whenever the visitor switches. */
+  onChange?: (value: string) => void;
 }) {
   const [active, setActive] = useState(defaultValue ?? items[0]?.value);
   const activeItem = items.find((i) => i.value === active) ?? items[0];
+
+  const select = (value: string) => {
+    if (value === active) return;
+    setActive(value);
+    onChange?.(value);
+  };
 
   return (
     <div className="w-full">
@@ -35,7 +44,7 @@ export function Tabs({
             <button
               key={item.value}
               type="button"
-              onClick={() => setActive(item.value)}
+              onClick={() => select(item.value)}
               className={cn(
                 "px-3 py-1.5 text-sm rounded-md transition-colors font-medium",
                 item.value === activeItem?.value

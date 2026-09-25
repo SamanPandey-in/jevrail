@@ -71,7 +71,7 @@ export function DocsMarkdown({ entry, source }: { entry: DocEntry; source: strin
       const classNames = (codeNode.properties?.className as string[] | undefined) ?? [];
       const language = classNames.find((c) => c.startsWith("language-"))?.replace("language-", "");
 
-      return <CodeBlock code={raw} label={language} className="mb-6" />;
+      return <CodeBlock code={raw} label={language} className="mb-6" trackData={{ doc: entry.slug || "index" }} />;
     },
     blockquote: (props) => (
       <blockquote className="border-l-2 border-primary/40 pl-4 italic text-muted-foreground my-6">{props.children}</blockquote>

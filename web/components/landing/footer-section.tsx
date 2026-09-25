@@ -6,12 +6,20 @@ import { GithubIcon as Github } from "@/components/shared/github-icon";
 import { ShareOnXButton } from "@/components/shared/share-on-x-button";
 import { XIcon } from "@/components/shared/x-icon";
 import { GITHUB_URL, TEMPLATE_CREDIT, X_URL } from "@/lib/site";
+import { track } from "@/lib/analytics";
 
-const footerLinks = {
+type FooterLink = {
+  name: string;
+  href: string;
+  /** Set on outbound GitHub links so the click can be attributed. */
+  placement?: string;
+};
+
+const footerLinks: Record<string, FooterLink[]> = {
   Explore: [
     { name: "Platform", href: "#features" },
     { name: "Docs", href: "/docs" },
-    { name: "GitHub", href: GITHUB_URL },
+    { name: "GitHub", href: GITHUB_URL, placement: "footer_nav" },
   ],
   Resources: [
     { name: "Installation", href: "/docs/installation" },
@@ -68,6 +76,7 @@ export function FooterSection() {
                   href={GITHUB_URL}
                   target="_blank"
                   rel="noreferrer"
+                  onClick={() => track("github_link_clicked", { placement: "footer_social" })}
                   className="text-muted-foreground hover:text-foreground transition-colors"
                   aria-label="GitHub"
                 >
@@ -76,6 +85,7 @@ export function FooterSection() {
                 <ShareOnXButton
                   text="A probability-scored pre-execution guard for terminal coding agents: JevRail. Check it out!"
                   className="ml-1"
+                  placement="footer"
                 />
               </div>
             </div>
@@ -89,6 +99,11 @@ export function FooterSection() {
                     <li key={link.name}>
                       <Link
                         href={link.href}
+                        onClick={
+                          link.placement
+                            ? () => track("github_link_clicked", { placement: link.placement })
+                            : undefined
+                        }
                         className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                       >
                         {link.name}

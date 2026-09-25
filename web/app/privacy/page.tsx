@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   },
 };
 
-const LAST_UPDATED = "September 24, 2026";
+const LAST_UPDATED = "September 25, 2026";
 
 export default function PrivacyPage() {
   return (
@@ -34,8 +34,12 @@ export default function PrivacyPage() {
       <p>
         This site ({SITE_NAME.toLowerCase()}.samanp.xyz) is a static marketing and documentation
         site. It uses Vercel Analytics to collect anonymous, aggregated page-view metrics (pages
-        visited, referrers, rough device/browser type). This data isn&apos;t tied to your name or
-        email, isn&apos;t sold, and isn&apos;t shared with advertisers. We don&apos;t set any
+        visited, referrers, rough device/browser type), and PostHog for the same kind of aggregate
+        traffic measurement plus counts of a few interactions — clicking &quot;Star on GitHub&quot;,
+        clicking &quot;Share on X&quot;, and copying a code block. PostHog is loaded from
+        us.i.posthog.com. None of it is tied to your name or email, isn&apos;t sold, and
+        isn&apos;t shared with advertisers. We never call <code>identify()</code>, so no profile
+        is ever created for you and no cross-session identity is built. We don&apos;t set any
         tracking cookies, and there is no login, form submission, or account creation on this site
         beyond the optional email link on the Contact page.
       </p>
@@ -60,9 +64,11 @@ export default function PrivacyPage() {
 
       <h2>Third parties</h2>
       <p>
-        This website is hosted on Vercel, which also provides the anonymous analytics above. The
-        CLI talks directly to whatever <code>base_url</code> you configure (TypeSafe AI&apos;s Jev
-        API by default, or a self-hosted compatible endpoint) — see the docs for details.
+        This website is hosted on Vercel, which also provides the anonymous analytics above. PostHog
+        (post-hoc data platform) receives the anonymous traffic and interaction counts described
+        above. The CLI talks directly to whatever <code>base_url</code> you configure (TypeSafe
+        AI&apos;s Jev API by default, or a self-hosted compatible endpoint) — see the docs for
+        details.
       </p>
 
       <h2>Changes to this policy</h2>

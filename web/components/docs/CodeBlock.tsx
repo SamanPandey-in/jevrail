@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Check, Copy } from "lucide-react";
+import { track, type AnalyticsEvent, type AnalyticsProps } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
 type CodeBlockProps = {
@@ -9,12 +10,26 @@ type CodeBlockProps = {
   /** Small label shown top-left, e.g. a language tag or "Terminal". */
   label?: string;
   className?: string;
+  /**
+   * Event fired when the code is copied. Defaults to `code_copied`; the
+   * install command block overrides it with `install_command_copied` so the
+   * top-of-funnel copies can be pulled out on their own.
+   */
+  event?: AnalyticsEvent;
+  /** Extra properties merged into the copy event, e.g. `{ surface: "hero" }`. */
+  trackData?: AnalyticsProps;
 };
 
   // A plain, dependency-free code block with a copy button. Used both by
-// the markdown renderer (every fenced code block in the docs gets one for
-// free) and directly by hand-built pages like Installation.
-export function CodeBlock({ code, label, className }: CodeBlockProps) {
+  // the markdown renderer (every fenced code block in the docs gets one for
+  // free) and directly by hand-built pages like Installation.
+export function CodeBlock({
+  code,
+  label,
+  className,
+  event = "code_copied",
+  trackData,
+}: CodeBlockProps) {
   const [copied, setCopied] = useState(false);
 
   const copy = async () => {
@@ -22,6 +37,7 @@ export function CodeBlock({ code, label, className }: CodeBlockProps) {
       await navigator.clipboard.writeText(code);
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
+      track(event, { label, ...trackData });
     } catch {
       // Clipboard API unavailable (e.g. insecure context). Fail silently,
       // the code is still selectable and copyable by hand.

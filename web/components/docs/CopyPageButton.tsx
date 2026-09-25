@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Copy, Check, ChevronDown, FileText } from "lucide-react";
+import { track } from "@/lib/analytics";
 
 export function CopyPageButton({ source, slug }: { source: string; slug: string }) {
   const [copied, setCopied] = useState(false);
@@ -22,6 +23,7 @@ export function CopyPageButton({ source, slug }: { source: string; slug: string 
     setCopied(true);
     setMenuOpen(false);
     setTimeout(() => setCopied(false), 2000);
+    track("copy_page_clicked", { doc: slug || "index" });
   };
 
   return (
